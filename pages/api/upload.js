@@ -1,11 +1,63 @@
-import { promises as fs } from 'fs';
-import path from 'path';
-import { IncomingForm } from 'formidable';
-import { PrismaClient } from '@prisma/client';
+import { promises as fs } from "fs";
+import path from "path";
+import { IncomingForm } from "formidable";
+import { PrismaClient } from "@prisma/client";
+import { getServerSession } from "next-auth/next";
+import CredentialsProvider from "next-auth/providers/credentials";
+import bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
-// On désactive le body parser par défaut de Next.js car Formidable va gérer le flux brut
+// On déclare authOptions directement ici
+const authOptions = {
+  providers: [
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.email || !credentials?.password) {
+          return null;
+        }
+
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email },
+        });
+
+        if (!user) return null;
+
+        const isValid = await bcrypt.compare(
+          credentials.password,
+          user.password
+        );
+
+        if (!isValid) return null;
+
+        return { id: user.id.toString(), email: user.email, role: user.role };
+      },
+    }),
+  ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.sub = user.id;
+        token.role = user.role;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (token) {
+        session.user.id = token.sub;
+        session.user.role = token.role;
+      }
+      return session;
+    },
+  },
+  secret: process.env.NEXTAUTH_SECRET || "mon_secret_tres_simple",
+};
+
 export const config = {
   api: {
     bodyParser: false,
@@ -13,17 +65,24 @@ export const config = {
 };
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Méthode non autorisée' });
+  if (req.method !== "POST") {
+    return res.status(405).json({ message: "Méthode non autorisée" });
   }
 
-  const form = new IncomingForm({
-    keepExtensions: true, // Garde l’extension (.xlsx, etc.)
-    multiples: false,     // On accepte un seul fichier
-  });
+  // On récupère la session directement avec l'authOptions local
+  const session = await getServerSession(req, res, authOptions);
+  console.log("Session récupérée :", session);
+
+  if (!session || !session.user.id) {
+    return res.status(401).json({ message: "Utilisateur non connecté" });
+  }
+
+  const userId = parseInt(session.user.id);
+  console.log("User ID utilisé pour l'upload :", userId);
+
+  const form = new IncomingForm({ keepExtensions: true, multiples: false });
 
   try {
-    // On parse la requête pour récupérer les fichiers et les champs
     const data = await new Promise((resolve, reject) => {
       form.parse(req, (err, fields, files) => {
         if (err) return reject(err);
@@ -32,47 +91,32 @@ export default async function handler(req, res) {
     });
 
     const { fields, files } = data;
-
-    // On récupère le JSON du champ textarea et on s’assure que c’est bien une string
     const jsonData = Array.isArray(fields.jsonData)
       ? fields.jsonData[0]
       : fields.jsonData;
 
-    if (!files.file) {
-      return res.status(400).json({ error: 'Aucun fichier reçu.' });
-    }
-
-    // On gère le cas où Formidable peut renvoyer un tableau ou un objet
     const uploadedFile = Array.isArray(files.file) ? files.file[0] : files.file;
+    const tempPath = uploadedFile.filepath;
+    const fileName = uploadedFile.originalFilename;
 
-    const tempPath = uploadedFile.filepath; // Chemin temporaire
-    const fileName = uploadedFile.originalFilename; // Nom d'origine du fichier
-
-    if (!tempPath || !fileName) {
-      return res.status(400).json({ error: 'Fichier ou chemin invalide.' });
-    }
-
-    // Dossier de destination
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    await fs.mkdir(uploadDir, { recursive: true }); // Crée le dossier si besoin
-
-    // Déplacement du fichier dans le dossier uploads
+    const uploadDir = path.join(process.cwd(), "public", "uploads");
+    await fs.mkdir(uploadDir, { recursive: true });
     const newFilePath = path.join(uploadDir, fileName);
     await fs.rename(tempPath, newFilePath);
 
     const relativeFilePath = `/uploads/${fileName}`;
 
-    // Sauvegarde en base avec Prisma
     const uploadRecord = await prisma.upload.create({
       data: {
         filePath: relativeFilePath,
-        jsonData: jsonData, // on envoie bien une string
+        jsonData: jsonData,
+        user: { connect: { id: userId } },
       },
     });
 
-    res.status(200).json({ message: 'Upload réussi', upload: uploadRecord });
+    res.status(200).json({ message: "Upload réussi", upload: uploadRecord });
   } catch (error) {
-    console.error('Erreur dans l’upload :', error);
-    res.status(500).json({ error: 'Erreur interne lors de l’upload.' });
+    console.error("Erreur lors de l’upload :", error);
+    res.status(500).json({ error: "Erreur lors de l’upload" });
   }
 }

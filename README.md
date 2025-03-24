@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Mon Projet Upload
 
-## Getting Started
+➡️ Objectif
 
-First, run the development server:
+Créer une application web Next.js permettant l'upload de fichiers Excel, la sauvegarde d'un JSON associé, la gestion des utilisateurs avec rôles (admin/user) et un espace admin pour voir et gérer tous les uploads.
 
-```bash
+➡️ Technos utilisées
+
+Next.js
+
+React
+
+Prisma ORM (SQLite)
+
+NextAuth (authentification sécurisée)
+
+Tailwind CSS (design responsive)
+
+React Toastify (notifications)
+
+➡️ Installation
+
+git clone <repo>
+cd mon-projet-upload
+npm install
+npx prisma migrate dev
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+➡️ Fonctionnalités
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Authentification sécurisée (bcrypt pour hasher les mots de passe)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Upload et stockage local avec chemin en base
 
-## Learn More
+Tableau des fichiers personnels et admin
 
-To learn more about Next.js, take a look at the following resources:
+Suppression d'uploads
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Filtres et recherche dans l'admin
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Interface responsive
 
-## Deploy on Vercel
+➡️ Sécurité
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Mot de passe hashé avec bcrypt
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Rôles vérifiés côté serveur pour les actions sensibles
+
+Aucune donnée sensible exposée dans le front
+
+➡️ Démo recommandée
+
+Créer un compte utilisateur
+
+Se connecter
+
+Uploader un fichier
+
+Consulter "Mes uploads"
+
+Se déconnecter et se reconnecter en admin
+
+Accéder au dashboard admin et supprimer un fichier
+
+Montrer les notifications
+
+Déconnexion
