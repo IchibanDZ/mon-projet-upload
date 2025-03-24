@@ -1,0 +1,7 @@
+-- CreateTable
+CREATE TABLE "Upload" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "filePath" TEXT NOT NULL,
+    "jsonData" TEXT NOT NULL,
+    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
