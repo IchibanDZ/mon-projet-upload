@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import bcrypt from "bcryptjs";
 import Navbar from "../components/Navbar";
+import MentionsLegales from "./mentions-legales";
 
 export default function Register() {
   const [email, setEmail] = useState("");

@@ -20,75 +20,42 @@ export default function Navbar() {
     <nav className="bg-gray-800 text-white p-4">
       <div className="flex justify-between items-center">
         <div className="text-xl font-bold">Mon-Projet</div>
-        <button className="md:hidden" onClick={() => setIsOpen(!isOpen)}>
-          ☰
-        </button>
+        <button className="md:hidden" onClick={() => setIsOpen(!isOpen)}>☰</button> 
         <div className="hidden md:flex space-x-4">
-          <Link href="/" className="hover:underline">
-            Accueil
-          </Link>
-          <Link href="/myuploads" className="hover:underline">
-            Mes fichiers
-          </Link>
-          {session?.user?.role === "ADMIN" && (
-            <Link href="/admin" className="hover:underline">
-              Admin
-            </Link>
+          <Link href="/" className="hover:underline">Accueil</Link>
+          <Link href="/myuploads" className="hover:underline">Mes fichiers</Link>
+          {session?.user?.role === "ADMIN" && ( //logique conditionnelle de la session util via Nextauth
+            <Link href="/admin" className="hover:underline">Admin</Link>
           )}
-          <Link href="/" className="hover:underline">
-            Upload
-          </Link>
+          <Link href="/" className="hover:underline">Upload</Link>
           {session ? (
-            <button
-              onClick={handleLogout}
-              className="bg-red-500 px-3 py-1 rounded hover:bg-red-600"
-            >
-              Déconnexion
-            </button>
+            <button onClick={handleLogout} className="bg-red-500 px-3 py-1 rounded hover:bg-red-600"
+            >Déconnexion</button>//handleLogout permet de terminer la session
           ) : (
-            <Link
-              href="/auth/signin"
-              className="bg-blue-500 px-3 py-1 rounded hover:bg-blue-600"
-            >
-              Connexion
-            </Link>
-          )}
+            <Link href="/auth/signin" className="bg-blue-500 px-3 py-1 rounded hover:bg-blue-600"
+            >Connexion</Link>)}
         </div>
       </div>
       {isOpen && (
         <div className="md:hidden flex flex-col mt-2 space-y-2">
-          <Link href="/" onClick={() => setIsOpen(false)}>
-            Accueil
-          </Link>
-          <Link href="/myuploads" onClick={() => setIsOpen(false)}>
-            Mes fichiers
-          </Link>
-          {session?.user?.role === "ADMIN" && (
-            <Link href="/admin" onClick={() => setIsOpen(false)}>
-              Admin
-            </Link>
-          )}
-          <Link href="/" onClick={() => setIsOpen(false)}>
-            Upload
-          </Link>
+          <Link href="/" onClick={() => setIsOpen(false)}>Accueil</Link>
+          <Link href="/myuploads" onClick={() => setIsOpen(false)}>Mes fichiers</Link>
+          {session?.user?.role === "ADMIN" && ( //setIsOpen permet de fermer le menu une fois qu'un lien est cliqué
+            <Link href="/admin" onClick={() => setIsOpen(false)}>Admin</Link>
+          )} 
+          <Link href="/" onClick={() => setIsOpen(false)}>Upload</Link>
           {session ? (
             <button
-              onClick={() => {
+              onClick={() => {// Ferme le menu et exécute handleLogout pour déconnecter l'utilisateur
                 setIsOpen(false);
                 handleLogout();
               }}
-              className="bg-red-500 px-3 py-1 rounded"
-            >
-              Déconnexion
-            </button>
+              className="bg-red-500 px-3 py-1 rounded">Déconnexion</button>
           ) : (
             <Link
               href="/auth/signin"
               onClick={() => setIsOpen(false)}
-              className="bg-blue-500 px-3 py-1 rounded"
-            >
-              Connexion
-            </Link>
+              className="bg-blue-500 px-3 py-1 rounded">Connexion</Link>
           )}
         </div>
       )}

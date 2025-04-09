@@ -1,10 +1,17 @@
+import "../src/app_old/globals.css";
+
 import { SessionProvider } from "next-auth/react";
-import "../src/app/globals.css"; // adapte si ton CSS est ailleurs
+import Footer from "../components/Footer";
 
 export default function MyApp({ Component, pageProps: { session, ...pageProps } }) {
   return (
     <SessionProvider session={session}>
-      <Component {...pageProps} />
+      <div className="flex flex-col min-h-screen">
+        <main className="flex-grow">
+          <Component {...pageProps} />
+        </main>
+        <Footer />
+      </div>
     </SessionProvider>
   );
 }

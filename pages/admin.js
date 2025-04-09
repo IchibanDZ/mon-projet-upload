@@ -36,47 +36,37 @@ export default function AdminDashboard() {
 
   return (
     <>
-      <Navbar />
-
-      <div className="container mx-auto p-4">
+      <Navbar /><div className="container mx-auto p-4">
         <h1 className="text-2xl font-bold mb-4 text-center">Dashboard Admin</h1>
-
         <input
           type="text"
           placeholder="Rechercher par nom de fichier ou email..."
-          value={search}
+          value={search}// Liaison de l'input avec le state 'search' et mise à jour en temps réel avec la valeur saisie.
           onChange={(e) => setSearch(e.target.value)}
           className="border p-2 rounded mb-4 w-full max-w-md mx-auto block"
-        />
-
-        <div className="overflow-x-auto">
+        /><div className="overflow-x-auto">
           <table className="w-full border-collapse border text-sm md:text-base">
             <thead>
-              <tr>
-                <th className="border p-2">Nom du fichier</th>
+              <tr><th className="border p-2">Nom du fichier</th>
                 <th className="border p-2">Utilisateur</th>
                 <th className="border p-2">Date d'upload</th>
-                <th className="border p-2">Lien</th>
-              </tr>
+                <th className="border p-2">Lien</th></tr>
             </thead>
-            <tbody>
+            <tbody>{/* Parcours de la liste filtrée des uploads pour générer une ligne par upload */}
               {filteredUploads.map((upload) => (
                 <tr key={upload.id}>
                   <td className="border p-2">
                     {upload.filePath.split("/").pop()}
-                  </td>
+                  </td>{/* Affichage de l'email de l'utilisateur associé à l'upload */}
                   <td className="border p-2">{upload.user.email}</td>
                   <td className="border p-2">
                     {new Date(upload.createdAt).toLocaleString()}
                   </td>
-                  <td className="border p-2">
-                    <a
-                      href={upload.filePath}
+                  <td className="border p-2">{/* Lien permettant d'ouvrir le fichier dans un nouvel onglet */}
+                    <a href={upload.filePath}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-500 underline"
-                    >
-                      Voir le fichier
+                      className="text-blue-500 underline">Voir le fichier
                     </a>
                   </td>
                 </tr>

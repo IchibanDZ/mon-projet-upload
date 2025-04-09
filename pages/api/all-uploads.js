@@ -1,33 +1,31 @@
-import { PrismaClient } from "@prisma/client";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "./auth/[...nextauth]";
+import prisma from "../../lib/prisma";  // ORM pour interagir avec la base de données
+import { getServerSession } from "next-auth/next";  // Fonction NextAuth pour récupérer la session côté serveur
+import { authOptions } from "./auth/[...nextauth]";  // Configuration NextAuth
 
-const prisma = new PrismaClient();
+export default async function handler(req, res) {  // Fonction handler API route
+  const session = await getServerSession(req, res, authOptions);  // Récupère la session active
 
-export default async function handler(req, res) {
-  const session = await getServerSession(req, res, authOptions);
-
-  if (!session || session.user.role !== "ADMIN") {
-    return res.status(403).json({ message: "Accès refusé" });
+  if (!session || session.user.role !== "ADMIN") {  // Vérifie que l'utilisateur est un admin
+    return res.status(403).json({ message: "Accès refusé" });  // Refus si non-admin
   }
 
   try {
-    const uploads = await prisma.upload.findMany({
+    const uploads = await prisma.upload.findMany({  // Récupère tous les fichiers depuis la base
       include: {
         user: {
           select: {
-            email: true,
+            email: true,  // Inclut uniquement l'email de l'utilisateur associé
           },
         },
       },
       orderBy: {
-        createdAt: "desc",
+        createdAt: "desc",  // Trie du plus récent au plus ancien
       },
     });
 
-    res.status(200).json(uploads);
+    res.status(200).json(uploads);  // Renvoie la liste des fichiers
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Erreur serveur" });
+    console.error(error);  // Log l'erreur serveur
+    res.status(500).json({ message: "Erreur serveur" });  // Réponse d'erreur générique
   }
 }

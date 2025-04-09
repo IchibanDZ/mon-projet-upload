@@ -1,122 +1,71 @@
-import { promises as fs } from "fs";
-import path from "path";
-import { IncomingForm } from "formidable";
-import { PrismaClient } from "@prisma/client";
-import { getServerSession } from "next-auth/next";
-import CredentialsProvider from "next-auth/providers/credentials";
-import bcrypt from "bcrypt";
-
-const prisma = new PrismaClient();
-
-// On déclare authOptions directement ici
-const authOptions = {
-  providers: [
-    CredentialsProvider({
-      name: "Credentials",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
-
-        const user = await prisma.user.findUnique({
-          where: { email: credentials.email },
-        });
-
-        if (!user) return null;
-
-        const isValid = await bcrypt.compare(
-          credentials.password,
-          user.password
-        );
-
-        if (!isValid) return null;
-
-        return { id: user.id.toString(), email: user.email, role: user.role };
-      },
-    }),
-  ],
-  callbacks: {
-    async jwt({ token, user }) {
-      if (user) {
-        token.sub = user.id;
-        token.role = user.role;
-      }
-      return token;
-    },
-    async session({ session, token }) {
-      if (token) {
-        session.user.id = token.sub;
-        session.user.role = token.role;
-      }
-      return session;
-    },
-  },
-  secret: process.env.NEXTAUTH_SECRET || "mon_secret_tres_simple",
-};
+import { promises as fs } from 'fs';
+import path from 'path';
+import { IncomingForm } from 'formidable';
+import { getSession } from "next-auth/react";
+import prisma from "../../lib/prisma";  // Utilisation de prisma depuis lib/prisma
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: false, // Désactive le bodyParser pour permettre à formidable de gérer la requête
   },
 };
-
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ message: "Méthode non autorisée" });
+  // Récupère la session de l'utilisateur et vérifie son authentification
+  const session = await getSession({ req });
+  if (!session) {
+    return res.status(401).json({ message: "Unauthorized" });
   }
-
-  // On récupère la session directement avec l'authOptions local
-  const session = await getServerSession(req, res, authOptions);
-  console.log("Session récupérée :", session);
-
-  if (!session || !session.user.id) {
-    return res.status(401).json({ message: "Utilisateur non connecté" });
-  }
-
-  const userId = parseInt(session.user.id);
-  console.log("User ID utilisé pour l'upload :", userId);
-
-  const form = new IncomingForm({ keepExtensions: true, multiples: false });
-
-  try {
-    const data = await new Promise((resolve, reject) => {
-      form.parse(req, (err, fields, files) => {
-        if (err) return reject(err);
-        resolve({ fields, files });
-      });
+  // Vérifie que la méthode HTTP utilisée est POST
+  if (req.method === 'POST') {
+    // Crée une instance de IncomingForm pour gérer l'upload de fichiers
+    const form = new IncomingForm();
+    // Configure le répertoire de destination
+    form.uploadDir = path.join(process.cwd(), 'public/uploads');
+    // Active l'option pour conserver l'extension originale du fichier(format)
+    form.keepExtensions = true;
+    // extraire les champs du form et les fichiers uploadés
+    form.parse(req, async (err, fields, files) => {
+      if (err) {
+        console.error("Error during file upload:", err);
+        return res.status(500).json({ message: "Error during file upload." });
+      }
+      console.log("Files received:", files);
+    // Vérifie la présence du fichier dans le champ 'file' et sélectionne le premier fichier en cas de multiples fichiers
+      const file = files.file ? files.file[0] : null;
+      if (!file) {
+        return res.status(400).json({ message: "File not found" });
+      }
+      // Extrait le nom original du fichier uploadé
+      const fileName = file.originalFilename;
+      if (!fileName) {
+        return res.status(400).json({ message: "File name is missing" });
+      }
+      // Construit le chemin relatif du fichier
+      const relativeFilePath = `/uploads/${fileName}`;
+      // Vérifie si "jsonData" est une chaîne, sinon, le convertit en chaîne JSON
+      const jsonData = typeof fields.jsonData === "string" ? fields.jsonData : JSON.stringify(fields.jsonData);
+      if (!jsonData) {
+        return res.status(400).json({ message: "JSON data is missing or invalid." });
+      }
+       // Convertit l'ID de l'utilisateur récupéré de la session en entier
+      const userId = parseInt(session.user.id, 10);
+      try {
+        // Crée un nouvel enregistrement dans la table Upload avec Prisma
+        const upload = await prisma.upload.create({
+          data: {
+            filePath: relativeFilePath,
+            jsonData: jsonData,
+            userId: userId,
+          },
+        });
+        return res.status(200).json({ message: "File uploaded successfully!", upload });
+      } catch (error) {
+        console.error("Error during database save:", error);
+        return res.status(500).json({ message: "Error during database save." });
+      }
     });
-
-    const { fields, files } = data;
-    const jsonData = Array.isArray(fields.jsonData)
-      ? fields.jsonData[0]
-      : fields.jsonData;
-
-    const uploadedFile = Array.isArray(files.file) ? files.file[0] : files.file;
-    const tempPath = uploadedFile.filepath;
-    const fileName = uploadedFile.originalFilename;
-
-    const uploadDir = path.join(process.cwd(), "public", "uploads");
-    await fs.mkdir(uploadDir, { recursive: true });
-    const newFilePath = path.join(uploadDir, fileName);
-    await fs.rename(tempPath, newFilePath);
-
-    const relativeFilePath = `/uploads/${fileName}`;
-
-    const uploadRecord = await prisma.upload.create({
-      data: {
-        filePath: relativeFilePath,
-        jsonData: jsonData,
-        user: { connect: { id: userId } },
-      },
-    });
-
-    res.status(200).json({ message: "Upload réussi", upload: uploadRecord });
-  } catch (error) {
-    console.error("Erreur lors de l’upload :", error);
-    res.status(500).json({ error: "Erreur lors de l’upload" });
+  } else {
+    // Si la méthode HTTP n'est pas POST, renvoie une réponse 405 (Méthode non autorisée)
+    return res.status(405).json({ message: "Method Not Allowed" });
   }
 }

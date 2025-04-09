@@ -1,25 +1,26 @@
-import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-import { useRouter } from "next/router";
-import Navbar from "../components/Navbar"; // On importe la Navbar
 
-export default function MyUploads() {
-  const { data: session, status } = useSession();
-  const [uploads, setUploads] = useState([]);
-  const [error, setError] = useState("");
-  const router = useRouter();
+import { useEffect, useState } from "react";  
+import { useSession } from "next-auth/react";  
+import { useRouter } from "next/router";  
+import Navbar from "../components/Navbar"; 
+
+export default function MyUploads() {  
+  const { data: session, status } = useSession();  // Récupération de la session utilisateur
+  const [uploads, setUploads] = useState([]);  // État contenant les fichiers de l'utilisateur
+  const [error, setError] = useState("");  
+  const router = useRouter();  //redirige
 
   useEffect(() => {
-    if (status === "loading") return;
+    if (status === "loading") return;  // Ne rien faire tant que la session est en chargement
     if (!session) {
-      router.push("/auth/signin"); // redirection si non connecté
+      router.push("/auth/signin");  // Redirection si l'utilisateur n'est pas connecté
       return;
     }
-    const fetchMyUploads = async () => {
-      const res = await fetch("/api/myuploads");
+    const fetchMyUploads = async () => {  // Fonction pour récupérer les fichiers personnels
+      const res = await fetch("/api/myuploads");  // Appel API
       if (res.ok) {
         const data = await res.json();
-        setUploads(data);
+        setUploads(data);  // Stocke les fichiers dans l'état
       } else {
         setError("Impossible de récupérer vos fichiers. Êtes-vous connecté ?");
       }
@@ -27,84 +28,49 @@ export default function MyUploads() {
     fetchMyUploads();
   }, [session, status, router]);
 
-  // Fonction suppression de fichier
-  const handleDelete = async (id) => {
-    const confirmDelete = confirm("Es-tu sûr de vouloir supprimer ce fichier ?");
-    if (!confirmDelete) return;
-
-    const res = await fetch(`/api/delete-upload?id=${id}`, {
-      method: "DELETE",
-    });
-
+  const handleDelete = async (id) => {  // Fonction pour supprimer un fichier
+    const confirmed = confirm("Supprimer ce fichier ?");
+    if (!confirmed) return;
+    const res = await fetch(`/api/delete-upload/${id}`, { method: "DELETE" });  // Appel API suppression
     if (res.ok) {
-      alert("Fichier supprimé !");
-      setUploads(uploads.filter((u) => u.id !== id));
+      setUploads(uploads.filter((u) => u.id !== id));  // Mise à jour locale après suppression
     } else {
-      alert("Erreur lors de la suppression.");
+      alert("Échec de la suppression.");
     }
   };
 
-  if (status === "loading") {
-    return <p>Chargement...</p>;
-  }
-
-  if (error) {
-    return <p className="text-red-500">{error}</p>;
-  }
-
   return (
     <>
-      <Navbar /> {/* Ajout de la barre de menu */}
+      <Navbar />
       <div className="container mx-auto p-4">
-  <h1 className="text-2xl font-bold mb-4">Mes fichiers uploadés</h1>
-  {uploads.length === 0 && <p>Aucun fichier trouvé.</p>}
-  {Array.isArray(uploads) && (
-    <div className="overflow-x-auto">
-      <table className="min-w-full border-collapse border">
-        <thead>
-          <tr>
-            <th className="border p-2">Nom du fichier</th>
-            <th className="border p-2">Télécharger</th>
-            <th className="border p-2">Date</th>
-            <th className="border p-2">Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          {uploads.map((upload) => (
-            <tr key={upload.id}>
-              <td className="border p-2">
-                {upload.filePath.split("/").pop()}
-              </td>
-              <td className="border p-2">
-                <a
-                  href={upload.filePath}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-500 underline"
-                >
-                  Télécharger
-                </a>
-              </td>
-              <td className="border p-2">
-                {new Date(upload.createdAt).toLocaleString()}
-              </td>
-              <td className="border p-2">
-                <button
-                  onClick={() => handleDelete(upload.id)}
-                  className="bg-red-500 text-white px-2 py-1 rounded text-sm"
-                >
-                  Supprimer
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )}
-</div>
-
+        <h1 className="text-2xl font-bold mb-4">Mes fichiers uploadés</h1>
+        {error && <p className="text-red-500">{error}</p>}
+        {uploads.length === 0 ? (
+          <p>Aucun fichier trouvé.</p>
+        ) : (
+          <table className="table-auto w-full">
+            <thead><tr>
+                <th>Nom du fichier</th>
+                <th>Date</th>
+                <th>Action</th></tr>
+            </thead>
+            <tbody>{/* Parcourt la liste des uploads et crée une ligne pour chaque upload */}
+              {uploads.map((upload) => ( 
+                <tr key={upload.id}>
+                  {/* Extraction et affichage du nom du fichier à partir du chemin complet */}
+                  <td>{upload.filePath.split("/").pop()}</td>
+                  <td>{new Date(upload.createdAt).toLocaleString()}</td> 
+                  <td> 
+                    <a href={upload.filePath} className="text-blue-600 mr-2">Voir</a>
+                    <button onClick={() => handleDelete(upload.id)} 
+                    className="text-red-600 py-4">Supprimer</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
     </>
   );
 }
-

@@ -18,6 +18,7 @@ export default function Home() {
     // Préparer les données à envoyer via FormData
     const formData = new FormData();
     formData.append("file", file);
+    // Ici, on envoie jsonData sous forme de chaîne (attention : JSON.stringify(jsonData) si jsonData est un objet)
     formData.append("jsonData", jsonData);
 
     try {
@@ -29,7 +30,7 @@ export default function Home() {
       if (res.ok) {
         setMessage("Upload réussi !");
       } else {
-        setMessage("Erreur lors de l'upload.");
+        setMessage(`Erreur lors de l'upload: ${data.message}`);
       }
     } catch (error) {
       console.error("Erreur : ", error);
@@ -49,6 +50,7 @@ export default function Home() {
           </label>
           <input
             type="file"
+            name="file"  // IMPORTANT : Ajout de l'attribut "name"
             accept=".xlsx,.xls"
             onChange={(e) =>
               setFile(e.target.files ? e.target.files[0] : null)
